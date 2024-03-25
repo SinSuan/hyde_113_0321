@@ -41,17 +41,25 @@ def get_full_prompt(model_type, user_prompt, raw_str):
     """
     print("enter get_full_prompt")
 
-    if model_type=='breeze':
+    print(f"raw_str = {raw_str}")
+    if 'breeze' in model_type:
         print("enter if breeze")
         config = configparser.ConfigParser()
         config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
-        system_prmpt = config['path']['hyde_prompt']
+        system_prmpt = config['prompt']['breeze_system_prompt']
+        
+        # full_prompt = \
+        #     f"<s> {system_prmpt} [INST] {user_prompt} markdown格式的表格：{raw_str}，總結： [/INST] "
+        
+        # full_prompt = \
+        #     f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請舉出有關於{raw_str}的危害： [/INST] "
+        
         full_prompt = \
-            f"<s> {system_prmpt} [INST] {user_prompt} markdown格式的表格：{raw_str}，總結： [/INST] "
+            f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請具體說明若作物遭受{raw_str}危害，會有哪些情況發生： [/INST] "
 
         print("exit if breeze")
 
-    elif model_type=='taide':
+    elif 'taide' in model_type:
         print("enter elif taide")
 
         full_prompt = \
@@ -59,11 +67,11 @@ def get_full_prompt(model_type, user_prompt, raw_str):
 
         print("exit elif taide")
 
-    elif model_type=='gpt':
+    elif 'gpt' in model_type:
         print("enter elif gpt")
 
         full_prompt = \
-            f"{user_prompt}markdown格式的表格：{raw_str}，總結："
+            f" {user_prompt} markdown格式的表格：{raw_str}，總結："
 
         print("exit elif gpt")
 
@@ -84,7 +92,7 @@ def load_model(model_type):
         print("\t\tGPU get")
 
         # 信彰的
-        path_2_model = os.getenv("PATH_2_MODEL")
+        path_2_model = os.getenv("PATH_2_breeze")
         print("\t\tPATH_2_MODEL get")
         model = AutoModelForCausalLM.from_pretrained(
             path_2_model,
@@ -114,6 +122,9 @@ def load_model(model_type):
 
 
         print("exit elif taide")
+
+    else:
+        model_and_tokenizer = None
 
     print("exit load_model")
     return model_and_tokenizer
