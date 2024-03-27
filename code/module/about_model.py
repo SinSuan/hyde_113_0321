@@ -47,13 +47,13 @@ def get_full_prompt(model_type, user_prompt, raw_str):
         config = configparser.ConfigParser()
         config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
         system_prmpt = config['prompt']['breeze_system_prompt']
-        
+
         # full_prompt = \
         #     f"<s> {system_prmpt} [INST] {user_prompt} markdown格式的表格：{raw_str}，總結： [/INST] "
-        
+
         # full_prompt = \
         #     f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請舉出有關於{raw_str}的危害： [/INST] "
-        
+
         full_prompt = \
             f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請具體說明若作物遭受{raw_str}危害，會有哪些情況發生： [/INST] "
 
@@ -79,10 +79,14 @@ def get_full_prompt(model_type, user_prompt, raw_str):
     return full_prompt
 
 
-def load_model(model_type):
+def load_model():
     """123
     """
     print("enter load_model")
+
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    model_type = config['mode']['model_type']
 
     if model_type=='breeze':
         print("enter if breeze")
@@ -235,7 +239,8 @@ def call_model(full_prompt, model_type, model_and_tokenizer=None):
                 full_prompt,
                 add_special_tokens=False,
                 return_tensors="pt"
-            ).to(model.device)
+            # ).to(model.device)
+            ).to("cuda")
             print("\t\tafter tokenize")
 
             print("\t\tbefore GenerationConfig")

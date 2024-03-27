@@ -1,22 +1,25 @@
 """123
 """
+import os
 import json
 import subprocess
 import configparser
 import numpy as np
 from FlagEmbedding import BGEM3FlagModel
-from module.about_model import get_full_prompt, call_model
+from module.about_retriever import init_retriever, apply_retriever
+from module.about_model import get_full_prompt, call_model, load_model
 from module.split_doc import extract_keyword
-# import about_model
 
-def hyde(raw_str, hyde_type, model_type, model_and_tokenizer=None):
+def hyde_single(raw_str, hyde_type, model_and_tokenizer=None):
     """123
     """
-    print("enter hyde")
+    print("enter hyde_single")
 
+    # load user_prompt
     config = configparser.ConfigParser()
     config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
     datapath = config['prompt']['hyde_prompt']
+    model_type = config['mode']['model_type']
 
     print("\tafter user_prompt")
     with open(datapath, 'r', encoding='utf-8') as file:
@@ -24,20 +27,58 @@ def hyde(raw_str, hyde_type, model_type, model_and_tokenizer=None):
         user_prompt = temp[hyde_type]['test']
     print("\tafter user_prompt")
 
+
+    # # create hyde prompt
+
     # full_prompt = get_full_prompt(model_type, user_prompt, raw_str)
-    
+
     keyword = extract_keyword(raw_str)
     print(f"keyword = {keyword}")
     full_prompt = get_full_prompt(model_type, user_prompt, keyword)
-    
+
+    # hyde data
     hyde_str = call_model(full_prompt, model_type, model_and_tokenizer)
 
-    print("exit hyde")
+    print("exit hyde_single")
     return hyde_str
 
 
+def hyde_total(now, path_2_raw_data, total_docid_2_hyde):
+    """123
+    """
+    print("enter hyde_total")
 
-def corpus_build(retriever_type, path_2_ttl_data, path_2_corpus):
+    # load model_type
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    model_and_tokenizer = load_model()
+
+    # hyde data
+    with open(path_2_raw_data, 'r', encoding='utf-8') as file:
+        total_raw_data = json.load(file)
+    for idx in total_docid_2_hyde:
+        print(f"\tin for-loop idx={idx}")
+        contents = total_raw_data[idx]['contents']
+        hyde_contents = hyde_single(
+            raw_str=contents,
+            hyde_type='document',
+            model_and_tokenizer=model_and_tokenizer
+        )
+        total_raw_data[idx]['contents'] += f"\n\n\n{hyde_contents}"
+
+    # save hyde_data
+    dir_2_hyde_dir = config['data']['hyde_data']
+    dir_2_hyde_data = f"{dir_2_hyde_dir}/{now}"
+    os.makedirs(f"{dir_2_hyde_dir}/{now}", exist_ok=True)
+    path_2_hyde_data = f"{dir_2_hyde_data}/{now}.json"
+    with open(path_2_hyde_data, 'w', encoding='utf-8') as file:
+        json.dump(total_raw_data, file, indent=4, ensure_ascii=False)
+
+    print("exit hyde_total")
+    return total_raw_data, path_2_hyde_data
+
+
+def corpus_build(path_2_ttl_data, path_2_corpus):
     """
 
     Parameters
@@ -51,6 +92,11 @@ def corpus_build(retriever_type, path_2_ttl_data, path_2_corpus):
     """
     print("enter corpus_build")
 
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    retriever_type = config['mode']['retriever_type']
+
+    # create corpus
     if retriever_type=='BM25':
         print("\tenter if 'BM25'")
 
@@ -80,7 +126,11 @@ def corpus_build(retriever_type, path_2_ttl_data, path_2_corpus):
         ttl_doc = [data['contents'] for data in total_data]
 
         # create corpus
-        encoder = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)
+        encoder = BGEM3FlagModel(
+            'BAAI/bge-m3',
+            use_fp16=True,
+            device='cuda:0'     # https://github.com/FlagOpen/FlagEmbedding/issues/419
+        )
         corpus = encoder.encode(
             ttl_doc,
             batch_size=12,
@@ -95,3 +145,46 @@ def corpus_build(retriever_type, path_2_ttl_data, path_2_corpus):
 
     print("exit corpus_build")
     return 0    # 表示成功
+
+
+def retrieve_related_docid(dir_2_corpus, ttl_query, top_k):
+    """123
+    """
+
+    retriever = init_retriever(dir_2_corpus)
+    ttl_hints_id = apply_retriever(
+        retriever,
+        ttl_query,
+        top_k=top_k
+    )
+    return ttl_hints_id
+
+
+def save_logging(now, dir_2_corpus, query_docid, ttl_hints_id):
+    """123
+    """
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    retriever = init_retriever(dir_2_corpus)
+
+    logging = {'dir_2_corpus' : dir_2_corpus}
+    for query, hints_id in zip(query_docid , ttl_hints_id):
+        gold_id = query_docid[query]
+
+        gold_doc = retriever.doc(int(gold_id)).raw()
+        gold_doc = json.loads(gold_doc)['contents']
+
+        hit = [i for i, x in enumerate(hints_id) if x == gold_id]
+
+        logging[query] = {
+            "gold_id" : gold_id,
+            "gold_doc" : [gold_doc],
+            "rank" : None if hit==[] else hit[0],
+            "hints_id" : hints_id
+        }
+
+    path_2_logging = os.path.join(config['logging']['logging'], f"{now}.json")
+    with open(path_2_logging, 'w', encoding='utf-8') as file:
+        json.dump(logging, file, ensure_ascii=False)
+
+    return path_2_logging

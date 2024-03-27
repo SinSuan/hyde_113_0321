@@ -1,15 +1,20 @@
 """123
 """
 
+import configparser
 import numpy as np
 import faiss
 from pyserini.search.lucene import LuceneSearcher
 from FlagEmbedding import BGEM3FlagModel
 
-def init_retriever(retriever_type, path_2_corpus):
+def init_retriever(path_2_corpus):
     """123
     """
     print("enter init_retriever")
+
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    retriever_type = config['mode']['retriever_type']
 
     if retriever_type=='BM25':
         print("\tenter if 'BM25'")
@@ -34,12 +39,10 @@ def init_retriever(retriever_type, path_2_corpus):
 
         print("\texit elif 'BGEM3'")
 
-    retriever_info = [retriever_type, retriever]
-
     print("exit init_retriever")
-    return retriever_info
+    return retriever
 
-def apply_retriever(retriever_info, ttl_query, top_k=15):
+def apply_retriever(retriever, ttl_query, top_k=15):
     r"""
 
     Parameters
@@ -54,7 +57,9 @@ def apply_retriever(retriever_info, ttl_query, top_k=15):
     """
     print("enter apply_retriever")
 
-    retriever_type, retriever = retriever_info
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    retriever_type = config['mode']['retriever_type']
 
     if retriever_type=='BM25':
         print("\tenter if 'BM25'")
@@ -95,9 +100,9 @@ def apply_retriever(retriever_info, ttl_query, top_k=15):
 
 #     ttl_query = ['松鼠吃葡萄嗎?']
 #     top_k = 15
-    
+
 #     corpus_build(retriever_type, path_2_ttl_data, path_2_corpus)
 #     retriever_info = init_retriever(retriever_type, path_2_corpus)
 #     ttl_hits = apply_retriever(retriever_info, ttl_query, top_k=15)
-    
+
 #     print(f"ttl_hits = {ttl_hits}")
