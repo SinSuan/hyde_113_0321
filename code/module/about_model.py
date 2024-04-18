@@ -27,7 +27,7 @@ from transformers import (
 import requests
 
 
-def get_full_prompt(model_type, user_prompt, raw_str):
+def get_full_prompt(model_type, user_prompt, raw_str, keyword_type):
     r"""
 
     Parameters
@@ -54,8 +54,12 @@ def get_full_prompt(model_type, user_prompt, raw_str):
         # full_prompt = \
         #     f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請舉出有關於{raw_str}的危害： [/INST] "
 
-        full_prompt = \
-            f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請具體說明若作物遭受{raw_str}危害，會有哪些情況發生： [/INST] "
+        if keyword_type=='Pathogenic':
+            full_prompt = \
+                f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請具體說明若作物遭受 {raw_str} 危害，會有哪些情況發生？ [/INST] "
+        elif keyword_type=='crop':
+            full_prompt = \
+                f"<s> {system_prmpt} [INST] 你現在是一位農業病蟲害防治專家，請具體說明若 {raw_str} 遭受病蟲害，會有哪些情況發生？ [/INST] "
 
         print("exit if breeze")
 
@@ -166,7 +170,7 @@ def call_model(full_prompt, model_type, model_and_tokenizer=None):
                         "do_sample": True,
                         "temperature": 0.01,
                         "top_p": 0.95,
-                        # 'max_new_tokens':200,
+                        "max_new_tokens":1000,
                     }
                 }
             )

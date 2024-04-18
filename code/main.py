@@ -1,5 +1,6 @@
 """123
 """
+
 import os
 import configparser
 from dotenv import load_dotenv
@@ -19,11 +20,13 @@ TTL_DOCID = QUERY_DOCID.values()
 TTL_DOCID = [int(idx) for idx in set(TTL_DOCID)]
 TTL_QUERY = list(QUERY_DOCID.keys())
 
+TTL_TABLEID = list(range(144265,147960))
+
 
 def main():
     """123
     """
-    
+
     config = configparser.ConfigParser()
     config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
     retriever_type = config['mode']['retriever_type']
@@ -31,7 +34,8 @@ def main():
 
     # hyde corpus
     path_2_raw_data = config['data']['raw_data']
-    _, path_2_hyde_data = hyde_total(now, path_2_raw_data, TTL_DOCID)
+    # _, path_2_hyde_data = hyde_total(now, 'document', path_2_raw_data, TTL_DOCID)
+    _, path_2_hyde_data = hyde_total(now, 'document', path_2_raw_data, TTL_TABLEID)
 
     # create corpus
     dir_2_corpus = os.path.join(config['corpus_dir'][retriever_type], now)
@@ -53,4 +57,22 @@ def main():
 
 if __name__ == "__main__":
     load_dotenv("/user_data/DG/hyde_113_0321/global_variable/.env")
-    main()
+    # main()
+    
+    config = configparser.ConfigParser()
+    config.read('/user_data/DG/hyde_113_0321/global_variable/config.ini')
+    retriever_type = config['mode']['retriever_type']
+    now = time_now()
+    
+    path_2_hyde_data = "/user_data/DG/hyde_113_0321/data/hyde_data/2024_0414_1524/2024_0414_1524.json"
+    dir_2_corpus = os.path.join(config['corpus_dir'][retriever_type], now)
+    os.makedirs(dir_2_corpus, exist_ok=True)
+    dir_2_corpus += f"/{now}.npy"
+    
+    corpus_build(path_2_hyde_data, dir_2_corpus)
+
+    # retrieve
+    ttl_hints_id = retrieve_related_docid(dir_2_corpus, TTL_QUERY, 15)
+
+    # sava log path
+    save_logging(now, dir_2_corpus, QUERY_DOCID, ttl_hints_id)

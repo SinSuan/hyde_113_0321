@@ -7,14 +7,44 @@ def extract_keyword(raw_doc):
     print("enter extract_keyword")
 
     first_line = raw_doc.split("\n")[0]
-    class_name, type_name, keyword = first_line.split(" ")[:3]
-    if class_name=='其他' :
+    first_line = first_line.split("：")[0]
+    first_line = first_line.split("(")[0]
+    first_line = first_line.split("（")[0]
+    split_first_line = first_line.split(" ")[:3]
+    print(f"split_first_line = {split_first_line}")
+    length = len(split_first_line)
+    print(f"length = {length}")
+
+
+    keyword_type = 'Pathogenic'
+    if length==3:
+        class_name, type_name, keyword = split_first_line
+
+        if keyword=='其他害蟲的基本資訊':
+            keyword = type_name
+            keyword_type = 'crop'
+        elif keyword=='貯倉管理與防治對策':
+            keyword = type_name
+        elif keyword=='跟蟎類':
+            keyword = '根蟎類'
+
+    elif length==2:
+        class_name, keyword = split_first_line
+
+    elif length==1:
+
+        if len(split_first_line[0])>20:
+            keyword = "白絹病"
+        else:
+            keyword = split_first_line[0]
+
+    if "的基本資訊" in keyword or "的防治方法" in keyword:
         keyword = keyword[:-6]
 
     print(f"\tkeyword = {keyword}")
     print("exit extract_keyword")
 
-    return keyword
+    return keyword, keyword_type
 
 
 
